@@ -19,7 +19,7 @@ on fs
     # Mount Android Filesystem
     mount ext3 /dev/block/mmcblk0p1 /system
     chmod 0755 /system
-    mount ext3 /dev/block/mmcblk0p1 /system ro remount
+    mount ext3 /dev/block/mmcblk0p1 /system rw remount
     mount ext3 /dev/block/mmcblk0p2 /cache nosuid nodev
     mount ext3 /dev/block/mmcblk0p3 /data nosuid nodev
     mkdir /.secure
@@ -145,20 +145,20 @@ on boot
     mount debugfs debugfs /debug
 
     # Enabling sleep in idle path
-    write /debug/pm_debug/sleep_while_idle 1
+    write /debug/pm_debug/sleep_while_idle 0
 
     # Enabling Voltage OFF in idle path
-    write /debug/pm_debug/voltage_off_while_idle 1
+    write /debug/pm_debug/voltage_off_while_idle 0
 
     # Enabling OFF mode
     write /debug/pm_debug/enable_off_mode 1
 
     # Enable SmartReflex autocompensation on VDD1 & VDD2
-    write /debug/pm_debug/smartreflex/sr_core/autocomp 1
-    write /debug/pm_debug/smartreflex/sr_mpu/autocomp 1
+    write /debug/pm_debug/smartreflex/sr_core/autocomp 0
+    write /debug/pm_debug/smartreflex/sr_mpu/autocomp 0
 
     # Enablig DVFS with ondemand governor
-    write /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor ondemand
+    write /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor powersave
 
     # Power Management
     write /sys/devices/system/cpu/cpufreq/ondemand/sampling_rate 40000
@@ -172,7 +172,7 @@ on boot
 
     # Bluetooth
     chown system system /dev/ttyO1
-    #chown bluetooth bluetooth /dev/ttyO1
+    chown bluetooth bluetooth /dev/ttyO1
     chmod 0664 /dev/ttyO1
     chown bluetooth bluetooth /sys/class/rfkill/rfkill1/state
     chmod 0664 /sys/class/rfkill/rfkill1/state
@@ -180,10 +180,10 @@ on boot
     # GPS
     chown system system /dev/ttyO0
     chmod 0664 /dev/ttyO0
-    #chown system system /dev/ttyVSP0
-    #chmod 0664 /dev/ttyVSP0
-    #chown system system /dev/ttyVSP1
-    #chmod 0664 /dev/ttyVSP1
+    chown system system /dev/ttyVSP0
+    chmod 0664 /dev/ttyVSP0
+    chown system system /dev/ttyVSP1
+    chmod 0664 /dev/ttyVSP1
     chown system system /sys/class/rfkill/rfkill2/state
     chmod 0664 /sys/class/rfkill/rfkill2/state
     setprop ro.kernel.android.gps gps
@@ -198,9 +198,9 @@ on boot
     write /sys/class/rfkill/rfkill3/state 0
 
     # Define modem related settings
-    setprop ro.radio.use-ppp yes
-    setprop keyguard.no_require_sim 1
-    setprop ro.config.nocheckin yes
+    setprop ro.radio.use-ppp no
+    setprop keyguard.no_require_sim 0
+    setprop ro.config.nocheckin no
 
     # SGX driver
     chmod 0666 /dev/pvrsrvkm
@@ -212,19 +212,18 @@ service pvrsrvinit /system/bin/pvrsrvinit
     user root
     oneshot
 
-#service ril-daemon /system/bin/rild -l /system/lib/libsierra-ril.so -- -d /dev/ttyUSB2
-#service ril-daemon /system/bin/rild -l /system/lib/libenforaedg308-ril.so -- -d /dev/pts/0
-    #socket rild stream 660 root radio
-    #socket rild-debug stream 660 radio system
-    #user root
-    #group radio cache inet misc audio
+service ril-daemon /system/bin/rild -l /system/lib/libenforaedg308-ril.so -- -d /dev/pts/0
+    socket rild stream 660 root radio
+    socket rild-debug stream 660 radio system
+    user root
+    group radio cache inet misc audio
 
 # pppd settings
-#service pppd_3g /system/bin/pppd call options.ppp
-    #user root radio
-    #group radio cache inet misc
-    #disabled
-    #oneshot
+service pppd_3g /system/bin/pppd call options.ppp
+    user root radio
+    group radio cache inet misc
+    disabled
+    oneshot
 
 service ins_ehci /system/bin/insmod /system/etc/ppp/ehci-hcd.ko
     user root radio
@@ -235,7 +234,6 @@ service ins_ehci /system/bin/insmod /system/etc/ppp/ehci-hcd.ko
 service rm_ehci /system/bin/rmmod ehci_hcd
     user root radio
     group radio cache inet misc
-    disabled
     oneshot
 
 service uim /system/bin/uim-sysfs
@@ -247,7 +245,6 @@ service hciattach /system/bin/brcm_patchram_plus -d --enable_hci  --patchram /ve
     user root
     # Changing user to root from bluetooth is a potential security issue
     group bluetooth net_bt_admin misc
-    disabled
     oneshot
 
 # OMAP specific services
@@ -258,27 +255,24 @@ service baseimage /system/bin/cexec.out /system/lib/dsp/baseimage.dof
     group audio
     oneshot
 
-#service pppd_gprs /etc/init.gprs-pppd /dev/pts/1
-    #user root
-    #group radio cache inet misc
-    #disabled
+service pppd_gprs /etc/init.gprs-pppd /dev/pts/1
+    user root
+    group radio cache inet misc
+    disabled
 
 # Camera FW3A service
-#service fw3a /system/bin/fw3a_core
-    #user media
-    #group system camera
+service fw3a /system/bin/fw3a_core
+    user media
+    group system camera
 
 service wpa_supplicant /system/bin/wpa_supplicant -Dwext -ieth0 -c/data/misc/wifi/wpa_supplicant.conf
     socket wpa_eth0 dgram 0660 wifi system
-    disabled
     oneshot
 
 service dhcpcd /system/bin/dhcpcd -ABKL eth0
-    disabled
     oneshot
 
 service dhcpcd_eth0 /system/bin/dhcpcd -ABKL eth0
-    disabled
     oneshot
 
 service gps-test /system/bin/scmd_4751 /dev/ttyO0
@@ -290,6 +284,6 @@ service gps-daemon /system/vendor/bin/glgps -c /system/vendor/gps/glconfig.xml
     user root
     group root
 
-#service BT_ADDR /system/bin/getBTMac.sh
-    #user root
-    #oneshot
+service BT_ADDR /system/bin/getBTMac.sh
+    user root
+    oneshot
